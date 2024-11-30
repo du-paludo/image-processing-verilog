@@ -1,9 +1,9 @@
 #!/bin/bash
 
-name="tigre"
+name="teste20x12"
 
-python3 convert-bmp-hex.py $name
-iverilog read_image.v
+python3.11 convert-bmp-hex.py $name
+iverilog image_blur_TB.v image_blur.v
 ./a.out
 grep -v // output.hex > formatted_output.hex
-python3 convert-hex-bmp.py
+python3.11 convert-hex-bmp.py

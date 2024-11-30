@@ -8,33 +8,28 @@ module image_blur(
 );
 
 parameter WIDTH = 20;
-parameter HEIGHT = 20;
+parameter HEIGHT = 12;
 parameter KERNEL_SIZE = 3;
 
-reg[7:0] image[0 : WIDTH*HEIGHT*3-1]; // Input/output image
+reg[7:0] inputImage[0 : WIDTH*HEIGHT*3-1]; // Input/output image
+reg[7:0] outputImage[0 : WIDTH*HEIGHT*3-1]; // Output image
 reg[7:0] kernel[0 : KERNEL_SIZE*KERNEL_SIZE-1]; // Kernel coefficients
 
-reg[15:0] row, col; // Row and column counters
+integer row, col, color_cycle; // Row and column counters
 reg[31:0] acc_R, acc_G, acc_B; // Accumulators for RGB channels
 reg[31:0] divider; // Divider for normalization
 
 // FSM states
-typedef enum reg[2:0] {
-    IDLE,
-    LOAD_IMAGE,
-    PROCESS_PIXEL,
-    WRITE_IMAGE,
-    DONE
-} state_t;
-state_t state;
+reg[2:0] state = IDLE;
+parameter IDLE = 0, LOAD_IMAGE = 1, PROCESS_PIXEL = 2, WRITE_IMAGE = 3, DONE = 4;
 
 // Initialization
 always @(posedge clk or posedge reset) begin
     if (reset) begin
-        state <= IDLE;
         done <= 0;
         row <= 0;
         col <= 0;
+        color_cycle <= 0;
         acc_R <= 0;
         acc_G <= 0;
         acc_B <= 0;
@@ -47,59 +42,106 @@ always @(posedge clk or posedge reset) begin
     end else begin
         case (state)
             IDLE: begin
-                if (start) state <= LOAD_IMAGE;
+                $display("Waiting for start signal\n");
+                if (start) begin
+                    state <= LOAD_IMAGE;
+                    $display("Loading input image");
+                end
             end
             LOAD_IMAGE: begin
                 // Simulate loading image into memory (external interface)
                 // In real design, connect image_in to external memory
                 if (row < HEIGHT && col < WIDTH) begin
-                    image[row * WIDTH + col] <= image_in;
-                    col <= col + 1;
-                    if (col == WIDTH-1) begin
-                        col <= 0;
-                        row <= row + 1;
-                    end
+                    $display("Row: %2d, Col: %2d, Color cycle: %2d", row, col, color_cycle);
+                    case (color_cycle)
+                        0: inputImage[(row * WIDTH + col) * 3 + 0] <= image_in; // Red
+                        1: inputImage[(row * WIDTH + col) * 3 + 1] <= image_in; // Green
+                        2: begin
+                            inputImage[(row * WIDTH + col) * 3 + 2] <= image_in; // Blue
+                            col <= col + 1; // Move to the next column after Blue
+                            if (col == WIDTH-1) begin
+                                col <= 0;       // Reset column
+                                row <= row + 1; // Move to the next row
+                            end
+                        end
+                    endcase
+                    color_cycle <= (color_cycle + 1) % 3;
                 end else begin
+                    // Display all input image data
+                    for (integer i = 0; i < WIDTH*HEIGHT*3; i = i + 1) begin
+                        $display("Input image[%2d]: %2X", i, inputImage[i]);
+                    end
+                    $display("Finished loading input image\n");
                     row <= 0;
                     col <= 0;
+                    color_cycle <= 0;
                     state <= PROCESS_PIXEL;
+                    $display("Processing image");
                 end
             end
             PROCESS_PIXEL: begin
                 // Apply kernel to calculate new RGB values
                 // Boundary handling
-                if (row > 0 && row < HEIGHT-1 && col > 0 && col < WIDTH-1) begin
-                    acc_R <= 0;
-                    acc_G <= 0;
-                    acc_B <= 0;
-                    divider <= 16; // Normalization factor (sum of kernel)
+                if (row < HEIGHT && col < WIDTH) begin
+                    $display("Row: %2d, Col: %2d", row, col);
+                    acc_R = 0;
+                    acc_G = 0;
+                    acc_B = 0;
+                    divider = 0; // Normalization factor (sum of kernel)
                     for (integer ki = 0; ki < KERNEL_SIZE; ki++) begin
                         for (integer kj = 0; kj < KERNEL_SIZE; kj++) begin
-                            acc_R <= acc_R + kernel[ki*KERNEL_SIZE+kj] * image[((row+ki-1)*WIDTH + (col+kj-1))*3];
-                            acc_G <= acc_G + kernel[ki*KERNEL_SIZE+kj] * image[((row+ki-1)*WIDTH + (col+kj-1))*3+1];
-                            acc_B <= acc_B + kernel[ki*KERNEL_SIZE+kj] * image[((row+ki-1)*WIDTH + (col+kj-1))*3+2];
+                            // $display("Row: %d, Col: %d\n", row+ki-1, col+kj-1);
+                            if (row+ki-1 >= 0 && row+ki-1 <= HEIGHT-1 && col+kj-1 >= 0 && col+kj-1 <= WIDTH-1) begin
+                                acc_R = acc_R + kernel[ki*KERNEL_SIZE+kj] * inputImage[((row+ki-1)*WIDTH + (col+kj-1))*3];
+                                acc_G = acc_G + kernel[ki*KERNEL_SIZE+kj] * inputImage[((row+ki-1)*WIDTH + (col+kj-1))*3+1];
+                                acc_B = acc_B + kernel[ki*KERNEL_SIZE+kj] * inputImage[((row+ki-1)*WIDTH + (col+kj-1))*3+2];
+                                divider = divider + kernel[ki*KERNEL_SIZE+kj];
+                            end
                         end
                     end
-                end
-                // Move to the next pixel
-                col <= col + 1;
-                if (col == WIDTH-1) begin
+                    // Normalize the result
+                    outputImage[(row*WIDTH + col) * 3] = acc_R / divider;
+                    outputImage[(row*WIDTH + col) * 3 + 1] = acc_G / divider;
+                    outputImage[(row*WIDTH + col) * 3 + 2] = acc_B / divider;
+
+                    col <= col + 1; // Move to the next column after Blue
+                    if (col == WIDTH-1) begin
+                        col <= 0;       // Reset column
+                        row <= row + 1; // Move to the next row
+                    end
+                end else begin
+                    // Display all output image data
+                    for (integer i = 0; i < WIDTH*HEIGHT*3; i = i + 1) begin
+                        $display("Output image[%2d]: %2X", i, outputImage[i]);
+                    end
+                    $display("Finished processing image\n");
+                    state <= WRITE_IMAGE;
+                    done <= 1;
+                    row <= 0;
                     col <= 0;
-                    row <= row + 1;
-                    if (row == HEIGHT-1) state <= WRITE_IMAGE;
+                    $display("Writing output image");
                 end
             end
             WRITE_IMAGE: begin
                 // Write back processed image
-                image_out <= image[row*WIDTH + col];
-                col <= col + 1;
-                if (col == WIDTH-1) begin
-                    col <= 0;
-                    row <= row + 1;
-                    if (row == HEIGHT-1) begin
-                        state <= DONE;
-                        done <= 1;
-                    end
+                if (row < HEIGHT && col < WIDTH) begin
+                    $display("Row: %2d, Col: %2d, Color cycle: %2d", row, col, color_cycle);
+                    case (color_cycle)
+                        0: image_out = outputImage[(row * WIDTH + col) * 3 + 0]; // Red
+                        1: image_out = outputImage[(row * WIDTH + col) * 3 + 1]; // Green
+                        2: begin
+                            image_out = outputImage[(row * WIDTH + col) * 3 + 2]; // Blue
+                            col <= col + 1; // Move to the next column after Blue
+                            if (col == WIDTH-1) begin
+                                col <= 0;       // Reset column
+                                row <= row + 1; // Move to the next row
+                            end
+                        end
+                    endcase
+                    color_cycle <= (color_cycle + 1) % 3;
+                end else begin
+                    $display("Finished writing output image\n");
+                    state <= DONE;
                 end
             end
             DONE: begin
