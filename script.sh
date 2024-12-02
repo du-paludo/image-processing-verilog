@@ -1,6 +1,6 @@
 #!/bin/bash
 
-name="teste20x12"
+name="lalaland"
 
 python3.11 convert-bmp-hex.py $name
 iverilog image_blur_TB.v image_blur.v

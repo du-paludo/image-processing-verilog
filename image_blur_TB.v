@@ -2,13 +2,14 @@
 
 module image_blur_TB();
 
-parameter WIDTH = 20;
-parameter HEIGHT = 12;
+parameter WIDTH = 788;
+parameter HEIGHT = 1080;
 
 reg clk = 1'b0;
 reg reset = 1'b1;
 reg start = 1'b0;
 reg [7:0] image_in = 1'b0;
+reg [1:0] kernel_type = 2'd1;
 wire [7:0] image_out;
 wire done;
 
@@ -17,7 +18,7 @@ integer i;
 
 integer out_file;
 
-image_blur DUT(.clk(clk), .reset(reset), .start(start), .image_in(image_in), .image_out(image_out), .done(done));
+image_blur DUT(.clk(clk), .reset(reset), .start(start), .kernel_type(kernel_type), .image_in(image_in), .image_out(image_out), .done(done));
 
 always    
     #10 clk = ~clk;
