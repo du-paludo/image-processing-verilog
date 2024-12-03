@@ -2,8 +2,8 @@
 
 module image_blur_TB();
 
-parameter WIDTH = 788;
-parameter HEIGHT = 1080;
+parameter WIDTH = 350;
+parameter HEIGHT = 350;
 
 reg clk = 1'b0;
 reg reset = 1'b1;

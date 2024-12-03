@@ -3,8 +3,8 @@ from imageio import imwrite
 import sys
 
 # Parameters (adjust as needed)
-width = 788 # Width of the original BMP image
-height = 1080  # Height of the original BMP image
+width = 350 # Width of the original BMP image
+height = 350  # Height of the original BMP image
 hex_file = 'formatted_output.hex'  # Input hex file
 output_bmp = 'output.bmp'  # Output BMP file
 

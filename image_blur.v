@@ -8,8 +8,8 @@ module image_blur(
     output reg done             // Done signal
 );
 
-parameter WIDTH = 788;
-parameter HEIGHT = 1080;
+parameter WIDTH = 350;
+parameter HEIGHT = 350;
 parameter KERNEL_SIZE = 3;
 
 reg[7:0] inputImage[0 : WIDTH*HEIGHT*3-1]; // Input/output image
@@ -23,7 +23,7 @@ reg[31:0] divider; // Divider for normalization
 // FSM states
 reg[2:0] state = IDLE;
 parameter IDLE = 0, LOAD_IMAGE = 1, PROCESS_PIXEL = 2, WRITE_IMAGE = 3, DONE = 4;
-parameter BLUR = 0, SHARPEN = 1, EDGE = 2;
+parameter GAUSSIAN = 0, MEAN = 1;
 // Initialization
 always @(posedge clk or posedge reset) begin
     if (reset) begin
@@ -34,26 +34,18 @@ always @(posedge clk or posedge reset) begin
         acc_R <= 0;
         acc_G <= 0;
         acc_B <= 0;
-        //divider <= 0;
+        divider <= 0;
 
         // Initialize kernel with gaussian blur coefficients
         case (kernel_type)
-            BLUR: begin
-                divider <= 16;
+            GAUSSIAN: begin
                 kernel[0] <= 1; kernel[1] <= 2; kernel[2] <= 1;
                 kernel[3] <= 2; kernel[4] <= 4; kernel[5] <= 2;
                 kernel[6] <= 1; kernel[7] <= 2; kernel[8] <= 1;
             end
-            SHARPEN: begin
-                divider <= 1;
-                kernel[0] <= 0; kernel[1] <= -1; kernel[2] <= 0;
-                kernel[3] <= -1; kernel[4] <= 5; kernel[5] <= -1;
-                kernel[6] <= 0; kernel[7] <= -1; kernel[8] <= 0;
-            end
-            EDGE: begin
-                divider <= 1;
-                kernel[0] <= -1; kernel[1] <= -1; kernel[2] <= -1;
-                kernel[3] <= 0; kernel[4] <= 0; kernel[5] <= 0;
+            MEAN: begin
+                kernel[0] <= 1; kernel[1] <= 1; kernel[2] <= 1;
+                kernel[3] <= 1; kernel[4] <= 1; kernel[5] <= 1;
                 kernel[6] <= 1; kernel[7] <= 1; kernel[8] <= 1;
             end
         endcase
@@ -106,15 +98,14 @@ always @(posedge clk or posedge reset) begin
                     acc_R = 0;
                     acc_G = 0;
                     acc_B = 0;
-                   // divider = 0; // Normalization factor (sum of kernel)
+                    divider = 0; // Normalization factor (sum of kernel)
                     for (integer ki = 0; ki < KERNEL_SIZE; ki++) begin
                         for (integer kj = 0; kj < KERNEL_SIZE; kj++) begin
-                            // $display("Row: %d, Col: %d\n", row+ki-1, col+kj-1);
                             if (row+ki-1 >= 0 && row+ki-1 <= HEIGHT-1 && col+kj-1 >= 0 && col+kj-1 <= WIDTH-1) begin
                                 acc_R = acc_R + kernel[ki*KERNEL_SIZE+kj] * inputImage[((row+ki-1)*WIDTH + (col+kj-1))*3];
                                 acc_G = acc_G + kernel[ki*KERNEL_SIZE+kj] * inputImage[((row+ki-1)*WIDTH + (col+kj-1))*3+1];
                                 acc_B = acc_B + kernel[ki*KERNEL_SIZE+kj] * inputImage[((row+ki-1)*WIDTH + (col+kj-1))*3+2];
-                                //divider = divider + kernel[ki*KERNEL_SIZE+kj];
+                                divider = divider + kernel[ki*KERNEL_SIZE+kj];
                             end
                         end
                     end
