@@ -8,7 +8,7 @@ parameter HEIGHT = 350;
 reg clk = 1'b0;
 reg reset = 1'b1;
 reg start = 1'b0;
-reg [7:0] image_in = 1'b0;
+reg [7:0] image_in = 1'd1;
 reg [1:0] kernel_type = 2'd1;
 wire [7:0] image_out;
 wire done;

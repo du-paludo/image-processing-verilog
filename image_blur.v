@@ -36,7 +36,7 @@ always @(posedge clk or posedge reset) begin
         acc_B <= 0;
         divider <= 0;
 
-        // Initialize kernel with gaussian blur coefficients
+        // Initialize kernel with chosen coefficients
         case (kernel_type)
             GAUSSIAN: begin
                 kernel[0] <= 1; kernel[1] <= 2; kernel[2] <= 1;

@@ -20,6 +20,8 @@ This project implements an image processing pipeline in Verilog. It is designed 
 
 - Output storage for the processed image (output.hex)
 
+- Python 3.11 and NumPy and ImageIo libraries for image conversion
+
 ## Files
 
 - `image_blur.v`: module for the image loading, processing, and saving.
@@ -30,7 +32,7 @@ This project implements an image processing pipeline in Verilog. It is designed 
   
 - `output.hex`: modified image in hexadecimal format.
   
-- `convert-bpm-hex.py`: Python script to convert a BMP image to hexadecimal format.
+- `convert-bmp-hex.py`: Python script to convert a BMP image to hexadecimal format.
   
 - `convert-hex-bmp.py`: Python script to convert a hexadecimal image to BMP format.
   
@@ -42,10 +44,10 @@ This project implements an image processing pipeline in Verilog. It is designed 
 
 1. Change the WIDTH and HEIGHT parameters in the `image_blur.v`, `image_blur_TB.v` and `convert-hex-bmp.py` files to match the input image dimensions.
 
-2. Convert the input image to hexadecimal format using the `convert-bpm-hex.py` script.
+2. Convert the input image to hexadecimal format using the `convert-bmp-hex.py` script.
 
 ```bash
-python convert-bpm-hex.py input.bmp
+python convert-bmp-hex.py input.bmp
 ```
 
 3. Run the Verilog simulation using the testbench file.
